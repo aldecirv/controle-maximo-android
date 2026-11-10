@@ -362,6 +362,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         db.beginTransaction()
         try {
             val l = lot(lotId) ?: throw IllegalArgumentException("Lote indisponível.")
+            if (l.status != "ativo" || l.isExpired) throw IllegalArgumentException("Este lote não está disponível na vitrine.")
             if (l.freeQty < qty) throw IllegalArgumentException("Restam apenas ${formatQty(l.freeQty)} ${l.unit} disponíveis para reserva.")
             val now = System.currentTimeMillis()
             val expires = now + 2L * 60 * 60 * 1000
