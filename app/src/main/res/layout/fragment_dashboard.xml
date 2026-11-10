@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <FrameLayout
+            android:id="@+id/hero"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_gradient_hero"
+            android:padding="17dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.CM.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PAINEL DE VALIDADE"
+                    android:textColor="#B9D6F5" />
+
+                <TextView
+                    android:id="@+id/greeting"
+                    style="@style/TextAppearance.CM.H1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Visão geral"
+                    android:textColor="@color/white"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:id="@+id/storeLine"
+                    style="@style/TextAppearance.CM.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Sua loja"
+                    android:textColor="#D6E7F8"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_badge_red"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="9dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_warning"
+                        app:tint="@color/danger" />
+
+                    <TextView
+                        android:id="@+id/urgentLine"
+                        style="@style/TextAppearance.CM.Caption"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="7dp"
+                        android:layout_weight="1"
+                        android:text="Carregando alertas..."
+                        android:textColor="@color/danger"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+                    <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lotes ativos" />
+                    <TextView android:id="@+id/kpiLots" style="@style/TextAppearance.CM.H2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/primary" android:textSize="21sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+                    <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Estoque total" />
+                    <TextView android:id="@+id/kpiStock" style="@style/TextAppearance.CM.H2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="21sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+                    <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Urgentes (≤2 dias)" />
+                    <TextView android:id="@+id/kpiUrgent" style="@style/TextAppearance.CM.H2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/danger" android:textSize="21sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+                    <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Vencidos" />
+                    <TextView android:id="@+id/kpiExpired" style="@style/TextAppearance.CM.H2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/warning" android:textSize="21sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Prioridades de hoje" />
+        <LinearLayout
+            android:id="@+id/alertsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:orientation="vertical" />
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Ações rápidas" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:orientation="horizontal">
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/quickRegister"
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="11dp">
+                    <ImageView android:layout_width="21dp" android:layout_height="21dp" android:src="@drawable/ic_add" app:tint="@color/primary" />
+                    <TextView style="@style/TextAppearance.CM.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Cadastrar lote" android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/quickMovement"
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="11dp">
+                    <ImageView android:layout_width="21dp" android:layout_height="21dp" android:src="@drawable/ic_arrow_down" app:tint="@color/primary" />
+                    <TextView style="@style/TextAppearance.CM.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Registrar baixa" android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/quickShowcase"
+                style="@style/Widget.CM.Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="11dp">
+                    <ImageView android:layout_width="21dp" android:layout_height="21dp" android:src="@drawable/ic_store" app:tint="@color/primary" />
+                    <TextView style="@style/TextAppearance.CM.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Vitrine" android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Próximos vencimentos" />
+        <LinearLayout android:id="@+id/lotsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="vertical" />
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Últimas movimentações" />
+        <LinearLayout android:id="@+id/movementsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="vertical" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

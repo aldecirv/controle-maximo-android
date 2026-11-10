@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <TextView style="@style/TextAppearance.CM.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MOVIMENTAÇÃO DE ESTOQUE" android:textColor="@color/primary" />
+        <TextView style="@style/TextAppearance.CM.H1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Registrar baixa" android:textSize="24sp" />
+        <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Venda, doação, descarte ou ajuste. O saldo reservado nunca é usado." />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.CM.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Selecione o lote">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView android:id="@+id/lotSelector" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="none" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:id="@+id/lotSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/bg_badge_blue" android:orientation="vertical" android:padding="10dp">
+                    <TextView android:id="@+id/lotTitle" style="@style/TextAppearance.CM.BodyStrong" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Selecione um lote" />
+                    <TextView android:id="@+id/lotDetails" style="@style/TextAppearance.CM.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="9.5sp" />
+                    <TextView android:id="@+id/lotStock" style="@style/TextAppearance.CM.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/primary" android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Tipo de baixa" />
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/typeGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            app:singleLine="true"
+            app:singleSelection="true">
+            <com.google.android.material.chip.Chip android:id="@+id/typeSale" style="@style/Widget.CM.Chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="Venda" />
+            <com.google.android.material.chip.Chip android:id="@+id/typeDonation" style="@style/Widget.CM.Chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Doação" />
+            <com.google.android.material.chip.Chip android:id="@+id/typeDisposal" style="@style/Widget.CM.Chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Descarte" />
+            <com.google.android.material.chip.Chip android:id="@+id/typeAdjustment" style="@style/Widget.CM.Chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ajuste" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.CM.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Quantidade">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/quantityInput" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="numberDecimal" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout android:id="@+id/saleFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="vertical">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="Valor recebido (R$)">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/valueInput" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="numberDecimal" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:layout_weight="1" android:hint="Pagamento" app:hintEnabled="false">
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView android:id="@+id/paymentInput" android:layout_width="match_parent" android:layout_height="50dp" android:hint="Pagamento" android:inputType="none" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/donationFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="vertical" android:visibility="gone">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                        <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="Instituição">
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView android:id="@+id/institutionInput" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="none" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/addInstitution" style="@style/Widget.CM.Button.Outlined" android:layout_width="wrap_content" android:layout_height="44dp" android:layout_marginStart="7dp" android:minWidth="0dp" android:text="+" android:textSize="16sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:hint="Motivo (opcional)">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/reasonInput" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="textCapSentences" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.CM.Input" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:hint="Observação (opcional)">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/noteInput" android:layout_width="match_parent" android:layout_height="50dp" android:inputType="textCapSentences" android:paddingTop="9dp" android:paddingBottom="9dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView android:id="@+id/preview" style="@style/TextAppearance.CM.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:text="Selecione um lote para ver o saldo." android:textColor="@color/primary" android:textSize="9.5sp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/confirmButton" style="@style/Widget.CM.Button" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="9dp" android:text="Registrar baixa" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView style="@style/TextAppearance.CM.H3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Últimas movimentações" />
+        <LinearLayout android:id="@+id/movementsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="vertical" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
