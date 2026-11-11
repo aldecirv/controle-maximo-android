@@ -95,8 +95,12 @@ Cobrem níveis de alerta, bloqueio por reservas, vendas/doações/descarte, TTL 
 - A validação foi feita com testes automatizados/Robolectric; não havia dispositivo Android físico conectado neste ambiente.
 - Recomenda-se testar em um comércio real antes de usar como sistema de produção.
 
+## Auditoria de aceite
+
+O relatório completo da revisão sênior (status E1–E6, correções e cenário de aceite) está em [REVIEW.md](REVIEW.md). Principais ressalvas: não há servidor/e-mail automático, rate limit por IP, menu sanfona web ou stepper; o app usa notificação local, resumo por e-mail manual e bottom nav nativo.
+
 ## Versão
 
-**1.0.0** — MVP Android nativo do Controle Máximo com painel, cadastro, alertas, baixas auditáveis, vitrine com reservas de 2h, relatórios e CSV.
+**1.1.0** — correções da auditoria sênior: validação de cadastro e unicidade de lote no banco, fuso America/Sao_Paulo, job local às 07:00, relatórios agregados em SQL com CSV UTF-8 BOM, DTO público da vitrine, bloqueios concorrentes, motivo obrigatório no descarte, referência de ajuste e anexo PDF opcional de doação.
 
-APK: [**controle-maximo-1.0.0.apk**](https://github.com/aldecirv/controle-maximo-android/releases/download/v1.0.0/controle-maximo-1.0.0.apk) · [Release v1.0.0](https://github.com/aldecirv/controle-maximo-android/releases/tag/v1.0.0)
+APK: [**controle-maximo-1.1.0.apk**](https://github.com/aldecirv/controle-maximo-android/releases/download/v1.1.0/controle-maximo-1.1.0.apk) · [Release v1.1.0](https://github.com/aldecirv/controle-maximo-android/releases/tag/v1.1.0)

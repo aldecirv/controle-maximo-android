@@ -46,10 +46,38 @@ class AlertsFragment : Fragment() {
             load()
         }
         binding.showcase.setOnClickListener { startActivity(Intent(requireContext(), ShowcaseActivity::class.java)) }
+        binding.emailButton.setOnClickListener { sendEmailSummary() }
         load()
     }
 
     override fun onResume() { super.onResume(); load() }
+
+    private fun sendEmailSummary() {
+        if (alerts.isEmpty()) {
+            Toast.makeText(requireContext(), "Não há alertas para enviar.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val body = buildString {
+            appendLine("Relatório de validade • ${db.settings().storeName}")
+            appendLine()
+            alerts.forEach { a ->
+                appendLine("Produto: ${a.lot.productName}")
+                appendLine("Lote: ${a.lot.code}")
+                appendLine("Validade: ${com.controlemaximo.app.data.formatDate(a.lot.expiryDate)} (${a.daysRemaining} dia(s))")
+                appendLine("Quantidade: ${com.controlemaximo.app.data.formatQty(a.lot.freeQty)} ${a.lot.unit}")
+                appendLine("Nível: ${a.level.label}")
+                appendLine()
+            }
+            appendLine("Equipe Controle Máximo Carrefour")
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_SUBJECT, "Controle Máximo • Alertas de validade")
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+        runCatching { startActivity(Intent.createChooser(intent, "Enviar resumo por e-mail")) }
+            .onFailure { Toast.makeText(requireContext(), "Nenhum app de e-mail disponível.", Toast.LENGTH_SHORT).show() }
+    }
 
     private fun load() {
         alerts = db.alerts()

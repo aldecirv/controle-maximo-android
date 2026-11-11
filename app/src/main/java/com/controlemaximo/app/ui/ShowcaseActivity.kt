@@ -13,7 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.controlemaximo.app.data.InventoryDb
-import com.controlemaximo.app.data.Offer
+import com.controlemaximo.app.data.PublicOffer
 import com.controlemaximo.app.data.formatDateTime
 import com.controlemaximo.app.data.formatMoney
 import com.controlemaximo.app.data.formatQty
@@ -25,7 +25,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 class ShowcaseActivity : AppCompatActivity() {
     private lateinit var binding: ActivityShowcaseBinding
     private lateinit var db: InventoryDb
-    private var offers: List<Offer> = emptyList()
+    private var offers: List<PublicOffer> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,21 +54,21 @@ class ShowcaseActivity : AppCompatActivity() {
         binding.list.adapter = OfferAdapter(offers) { reserve(it) }
     }
 
-    private fun reserve(offer: Offer) {
+    private fun reserve(offer: PublicOffer) {
         val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), dp(0)) }
         val qty = EditText(this).apply { hint = "Quantidade (máx. 50)"; inputType = InputType.TYPE_CLASS_NUMBER; setText("1") }
         val name = EditText(this).apply { hint = "Nome completo"; inputType = InputType.TYPE_CLASS_TEXT }
         val phone = EditText(this).apply { hint = "Telefone com DDD"; inputType = InputType.TYPE_CLASS_PHONE }
         container.addView(qty); container.addView(name); container.addView(phone)
         MaterialAlertDialogBuilder(this)
-            .setTitle("Reservar ${offer.lot.productName}")
-            .setMessage("${formatQty(offer.remainingQty)} ${offer.lot.unit} restantes • ${formatMoney(offer.discountedPrice)} cada\nA reserva fica ativa por 2 horas.")
+            .setTitle("Reservar ${offer.productName}")
+            .setMessage("${formatQty(offer.remainingQty)} ${offer.unit} restantes • ${formatMoney(offer.finalPrice)} cada\nA reserva fica ativa por 2 horas.")
             .setView(container)
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Reservar") { _, _ ->
                 runCatching {
                     db.createReservation(
-                        offer.lot.id,
+                        offer.id,
                         qty.text.toString().toDoubleOrNull() ?: 0.0,
                         name.text.toString(),
                         phone.text.toString()

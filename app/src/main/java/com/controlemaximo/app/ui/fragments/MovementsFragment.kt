@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.controlemaximo.app.R
 import com.controlemaximo.app.data.AlertEngine
@@ -54,12 +55,19 @@ class MovementsFragment : Fragment() {
             }
             binding.saleFields.visibility = if (type == MovementType.SALE) View.VISIBLE else View.GONE
             binding.donationFields.visibility = if (type == MovementType.DONATION) View.VISIBLE else View.GONE
+            if (type != MovementType.DONATION) {
+                selectedAttachment = null
+                binding.attachmentLabel.visibility = View.GONE
+            }
+            binding.adjustmentFields.visibility = if (type == MovementType.ADJUSTMENT) View.VISIBLE else View.GONE
+            binding.reasonInput.hint = if (type == MovementType.DISPOSAL) "Motivo do descarte (obrigatório)" else "Motivo (opcional)"
             updatePreview()
         }
         binding.quantityInput.addTextChangedListener(simpleWatcher { updatePreview() })
         binding.valueInput.addTextChangedListener(simpleWatcher { updatePreview() })
         binding.confirmButton.setOnClickListener { confirm() }
         binding.addInstitution.setOnClickListener { addInstitution() }
+        binding.attachPdf.setOnClickListener { pdfPicker.launch(arrayOf("application/pdf")) }
         load()
         arguments?.getString(ARG_LOT)?.let { id -> selectLot(id) }
     }
@@ -77,6 +85,7 @@ class MovementsFragment : Fragment() {
             renderLot()
         }
         setupInstitutions()
+        setupAdjustmentReferences()
         currentId?.let { selectLot(it) } ?: renderLot()
         renderMovements()
         (activity as? MainActivity)?.refreshHeader()
@@ -125,6 +134,12 @@ class MovementsFragment : Fragment() {
         val institution = selectedInstitution?.id
         val reason = binding.reasonInput.text?.toString()?.takeIf { it.isNotBlank() }
         val note = binding.noteInput.text?.toString()?.takeIf { it.isNotBlank() }
+        if (type == MovementType.DISPOSAL && reason == null) {
+            layoutOf(binding.reasonInput)?.error = "Informe o motivo do descarte (vencido, avariado ou outro)."
+            binding.reasonInput.requestFocus()
+            return
+        }
+        layoutOf(binding.reasonInput)?.error = null
         try {
             val afterMessage = db.simulateMovement(lot.id, type, qty)
             MaterialAlertDialogBuilder(requireContext())
@@ -133,8 +148,15 @@ class MovementsFragment : Fragment() {
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Confirmar") { _, _ ->
                     runCatching {
-                        db.registerMovement(lot.id, type, qty, if (type == MovementType.SALE) value else null,
-                            if (type == MovementType.SALE) payment else null, if (type == MovementType.DONATION) institution else null, reason, note)
+                        db.registerMovement(
+                            lot.id, type, qty,
+                            if (type == MovementType.SALE) value else null,
+                            if (type == MovementType.SALE) payment else null,
+                            if (type == MovementType.DONATION) institution else null,
+                            reason, note,
+                            if (type == MovementType.ADJUSTMENT) selectedReference?.id else null,
+                            if (type == MovementType.DONATION) selectedAttachment else null
+                        )
                     }.onSuccess {
                         Toast.makeText(requireContext(), "Baixa registrada com sucesso.", Toast.LENGTH_SHORT).show()
                         binding.quantityInput.setText("")
@@ -151,6 +173,33 @@ class MovementsFragment : Fragment() {
     }
 
     private var selectedInstitution: com.controlemaximo.app.data.DonationInstitution? = null
+    private var selectedReference: com.controlemaximo.app.data.Movement? = null
+    private var selectedAttachment: String? = null
+
+    private val pdfPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        runCatching {
+            val resolver = requireContext().contentResolver
+            var name = "termo.pdf"
+            var size = 0L
+            resolver.query(uri, null, null, null, null)?.use { c ->
+                if (c.moveToFirst()) {
+                    val nameIndex = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    if (nameIndex >= 0) name = c.getString(nameIndex) ?: name
+                    if (sizeIndex >= 0) size = c.getLong(sizeIndex)
+                }
+            }
+            require(size in 1..5L * 1024 * 1024) { "O PDF deve ter no máximo 5 MB." }
+            val dir = java.io.File(requireContext().filesDir, "termos").apply { mkdirs() }
+            val target = java.io.File(dir, "${System.currentTimeMillis()}-$name")
+            resolver.openInputStream(uri)?.use { input -> target.outputStream().use { output -> input.copyTo(output) } }
+                ?: throw IllegalArgumentException("Não foi possível ler o PDF.")
+            selectedAttachment = target.name
+            binding.attachmentLabel.visibility = View.VISIBLE
+            binding.attachmentLabel.text = "Anexado: $name"
+        }.onFailure { toast(it.message ?: "Falha ao anexar PDF.") }
+    }
 
     private fun setupInstitutions() {
         val inst = db.institutions()
@@ -158,6 +207,16 @@ class MovementsFragment : Fragment() {
         (binding.institutionInput as MaterialAutoCompleteTextView).setAdapter(adapter)
         (binding.institutionInput as MaterialAutoCompleteTextView).setOnItemClickListener { _, _, position, _ ->
             selectedInstitution = inst.getOrNull(position)
+        }
+    }
+
+    private fun setupAdjustmentReferences() {
+        val refs = db.movements(20)
+        val labels = refs.map { "${it.type.label} • ${it.productName} • ${it.dateLabel}" }
+        val adapter = ArrayAdapter(requireContext(), R.layout.item_dropdown, labels)
+        (binding.referenceInput as MaterialAutoCompleteTextView).setAdapter(adapter)
+        (binding.referenceInput as MaterialAutoCompleteTextView).setOnItemClickListener { _, _, position, _ ->
+            selectedReference = refs.getOrNull(position)
         }
     }
 
@@ -227,6 +286,15 @@ class MovementsFragment : Fragment() {
             card.addView(content)
             binding.movementsContainer.addView(card)
         }
+    }
+
+    private fun layoutOf(input: android.widget.TextView): com.google.android.material.textfield.TextInputLayout? {
+        var parent: android.view.ViewParent? = input.parent
+        while (parent != null) {
+            if (parent is com.google.android.material.textfield.TextInputLayout) return parent
+            parent = parent.parent
+        }
+        return null
     }
 
     private fun simpleWatcher(block: () -> Unit) = object : TextWatcher {

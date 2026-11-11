@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import java.time.LocalDate
 import java.util.UUID
 
-class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContext, DB_NAME, null, 1) {
+class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContext, DB_NAME, null, 4) {
 
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
@@ -18,7 +18,8 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         db.execSQL("""
             CREATE TABLE produtos (
                 id TEXT PRIMARY KEY, nome TEXT NOT NULL, categoria TEXT NOT NULL,
-                unidade_medida TEXT NOT NULL, custo REAL NOT NULL, preco_venda REAL NOT NULL,
+                unidade_medida TEXT NOT NULL, custo REAL NOT NULL CHECK (custo >= 0),
+                preco_venda REAL NOT NULL CHECK (preco_venda > 0),
                 fornecedor TEXT NOT NULL, criado_em INTEGER NOT NULL
             )""".trimIndent())
         db.execSQL("""
@@ -28,17 +29,20 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         db.execSQL("""
             CREATE TABLE lotes (
                 id TEXT PRIMARY KEY, produto_id TEXT NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
-                codigo_lote TEXT NOT NULL, data_fabricacao TEXT NOT NULL, data_validade TEXT NOT NULL,
-                quantidade_inicial REAL NOT NULL, quantidade_disponivel REAL NOT NULL,
-                quantidade_reservada REAL NOT NULL DEFAULT 0, desconto_percentual REAL NOT NULL DEFAULT 30,
-                status TEXT NOT NULL DEFAULT 'ativo', criado_em INTEGER NOT NULL
+                codigo_lote TEXT NOT NULL UNIQUE, data_fabricacao TEXT NOT NULL, data_validade TEXT NOT NULL,
+                quantidade_inicial REAL NOT NULL CHECK (quantidade_inicial > 0),
+                quantidade_disponivel REAL NOT NULL CHECK (quantidade_disponivel >= 0),
+                quantidade_reservada REAL NOT NULL DEFAULT 0 CHECK (quantidade_reservada >= 0),
+                desconto_percentual REAL NOT NULL DEFAULT 30 CHECK (desconto_percentual >= 0 AND desconto_percentual <= 100),
+                status TEXT NOT NULL DEFAULT 'ativo', criado_em INTEGER NOT NULL,
+                CHECK (data_validade > data_fabricacao)
             )""".trimIndent())
         db.execSQL("""
             CREATE TABLE movimentacoes (
                 id TEXT PRIMARY KEY, lote_id TEXT NOT NULL REFERENCES lotes(id), tipo TEXT NOT NULL,
-                quantidade REAL NOT NULL, valor_recebido REAL, forma_pagamento TEXT,
+                quantidade REAL NOT NULL CHECK (quantidade > 0), valor_recebido REAL, forma_pagamento TEXT,
                 instituicao_id TEXT REFERENCES instituicoes(id), motivo TEXT, observacao TEXT,
-                criado_em INTEGER NOT NULL
+                referencia_id TEXT, termo_nome TEXT, criado_em INTEGER NOT NULL
             )""".trimIndent())
         db.execSQL("""
             CREATE TABLE reservas (
@@ -46,6 +50,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
                 quantidade REAL NOT NULL, nome_cliente TEXT NOT NULL, telefone_cliente TEXT NOT NULL,
                 criado_em INTEGER NOT NULL, expira_em INTEGER NOT NULL, status TEXT NOT NULL
             )""".trimIndent())
+        createValidationTriggers(db)
         db.execSQL("""
             CREATE TABLE configuracoes (
                 id TEXT PRIMARY KEY, nome_loja TEXT NOT NULL, dias_atencao INTEGER NOT NULL,
@@ -56,7 +61,44 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         seedDemo(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 3) {
+            runCatching { db.execSQL("ALTER TABLE movimentacoes ADD COLUMN referencia_id TEXT") }
+        }
+        if (oldVersion < 4) {
+            runCatching { db.execSQL("ALTER TABLE movimentacoes ADD COLUMN termo_nome TEXT") }
+        }
+        createValidationTriggers(db)
+        createMovementTriggers(db)
+    }
+
+    private fun createValidationTriggers(db: SQLiteDatabase) {
+        db.execSQL("""
+            CREATE TRIGGER IF NOT EXISTS trg_lote_validate_insert BEFORE INSERT ON lotes
+            WHEN NEW.codigo_lote IS NULL OR TRIM(NEW.codigo_lote) = ''
+              OR NEW.data_validade <= NEW.data_fabricacao
+              OR NEW.quantidade_inicial <= 0 OR NEW.quantidade_disponivel < 0
+              OR NEW.quantidade_reservada < 0 OR NEW.desconto_percentual < 0 OR NEW.desconto_percentual > 100
+            BEGIN SELECT RAISE(ABORT, 'Lote inválido: validade, quantidade, código ou desconto.'); END""".trimIndent())
+        db.execSQL("""
+            CREATE TRIGGER IF NOT EXISTS trg_lote_validate_update BEFORE UPDATE ON lotes
+            WHEN NEW.data_validade <= NEW.data_fabricacao
+              OR NEW.quantidade_inicial <= 0 OR NEW.quantidade_disponivel < 0
+              OR NEW.quantidade_reservada < 0 OR NEW.desconto_percentual < 0 OR NEW.desconto_percentual > 100
+            BEGIN SELECT RAISE(ABORT, 'Lote inválido: validade, quantidade ou desconto.'); END""".trimIndent())
+        db.execSQL("""
+            CREATE TRIGGER IF NOT EXISTS trg_lote_unique_insert BEFORE INSERT ON lotes
+            WHEN EXISTS (SELECT 1 FROM lotes WHERE codigo_lote = NEW.codigo_lote COLLATE NOCASE)
+            BEGIN SELECT RAISE(ABORT, 'Código de lote já cadastrado.'); END""".trimIndent())
+        db.execSQL("""
+            CREATE TRIGGER IF NOT EXISTS trg_lote_unique_update BEFORE UPDATE OF codigo_lote ON lotes
+            WHEN EXISTS (SELECT 1 FROM lotes WHERE codigo_lote = NEW.codigo_lote COLLATE NOCASE AND id <> OLD.id)
+            BEGIN SELECT RAISE(ABORT, 'Código de lote já cadastrado.'); END""".trimIndent())
+        db.execSQL("""
+            CREATE TRIGGER IF NOT EXISTS trg_mov_reason BEFORE INSERT ON movimentacoes
+            WHEN NEW.tipo = 'descarte' AND (NEW.motivo IS NULL OR TRIM(NEW.motivo) = '')
+            BEGIN SELECT RAISE(ABORT, 'Descarte exige motivo.'); END""".trimIndent())
+    }
 
     private fun createMovementTriggers(db: SQLiteDatabase) {
         db.execSQL("""
@@ -192,6 +234,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
     ): Lot {
         validateProduct(name, category, unit, cost, price, supplier)
         validateLot(lotCode, manufactureDate, expiryDate, initialQty, discount)
+        ensureLotCodeAvailable(lotCode)
         val productId = UUID.randomUUID().toString()
         val lotId = UUID.randomUUID().toString()
         val db = writableDatabase
@@ -213,6 +256,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         initialQty: Double, discount: Double
     ): Lot {
         validateLot(lotCode, manufactureDate, expiryDate, initialQty, discount)
+        ensureLotCodeAvailable(lotCode)
         val lotId = UUID.randomUUID().toString()
         writableDatabase.insertOrThrow("lotes", null, lotValues(productId, lotCode, manufactureDate, expiryDate, initialQty, discount).apply { put("id", lotId) })
         return lot(lotId) ?: error("Lote não encontrado após cadastro.")
@@ -223,6 +267,13 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         put("data_validade", expiry); put("quantidade_inicial", qty); put("quantidade_disponivel", qty)
         put("quantidade_reservada", 0.0); put("desconto_percentual", discount); put("status", "ativo")
         put("criado_em", System.currentTimeMillis())
+    }
+
+    fun lotCodeExists(code: String): Boolean =
+        readableDatabase.rawQuery("SELECT 1 FROM lotes WHERE codigo_lote = ? COLLATE NOCASE", arrayOf(code.trim())).use { it.moveToFirst() }
+
+    private fun ensureLotCodeAvailable(code: String) {
+        if (lotCodeExists(code)) throw IllegalArgumentException("Código de lote já cadastrado. Use um código único.")
     }
 
     private fun validateProduct(name: String, category: String, unit: String, cost: Double, price: Double, supplier: String) {
@@ -268,6 +319,8 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         institutionName = getString(getColumnIndexOrThrow("instituicao_nome")),
         reason = getString(getColumnIndexOrThrow("motivo")),
         note = getString(getColumnIndexOrThrow("observacao")),
+        referenceId = getString(getColumnIndexOrThrow("referencia_id")),
+        attachmentName = getString(getColumnIndexOrThrow("termo_nome")),
         createdAt = getLong(getColumnIndexOrThrow("criado_em")),
         lotCode = getString(getColumnIndexOrThrow("codigo_lote")),
         productName = getString(getColumnIndexOrThrow("produto_nome")),
@@ -286,9 +339,17 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
 
     fun registerMovement(
         lotId: String, type: MovementType, qty: Double, valueReceived: Double?,
-        paymentMethod: String?, institutionId: String?, reason: String?, note: String?
-    ): Movement {
+        paymentMethod: String?, institutionId: String?, reason: String?, note: String?,
+        referenceId: String? = null, attachmentName: String? = null
+    ): Movement = synchronized(TX_LOCK) {
         require(qty > 0) { "Quantidade deve ser maior que zero." }
+        if (type == MovementType.DISPOSAL && reason.isNullOrBlank()) {
+            throw IllegalArgumentException("Informe o motivo do descarte (vencido, avariado ou outro).")
+        }
+        if (referenceId != null) {
+            val exists = readableDatabase.rawQuery("SELECT 1 FROM movimentacoes WHERE id = ?", arrayOf(referenceId)).use { it.moveToFirst() }
+            require(exists) { "Movimentação original do ajuste não encontrada." }
+        }
         val db = writableDatabase
         db.beginTransaction()
         try {
@@ -302,6 +363,8 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
                 put("id", movementId); put("lote_id", lotId); put("tipo", type.db); put("quantidade", qty)
                 put("valor_recebido", valueReceived); put("forma_pagamento", paymentMethod)
                 put("instituicao_id", institutionId); put("motivo", reason); put("observacao", note)
+                put("referencia_id", referenceId)
+                put("termo_nome", attachmentName)
                 put("criado_em", System.currentTimeMillis())
             })
             val newQty = (l.availableQty - qty).coerceAtLeast(0.0)
@@ -313,7 +376,8 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
             return Movement(
                 id = movementId, lotId = lotId, type = type, quantity = qty, valueReceived = valueReceived,
                 paymentMethod = paymentMethod, institutionId = institutionId, institutionName = null,
-                reason = reason, note = note, createdAt = System.currentTimeMillis(), lotCode = l.code,
+                reason = reason, note = note, referenceId = referenceId, attachmentName = attachmentName,
+                createdAt = System.currentTimeMillis(), lotCode = l.code,
                 productName = l.productName, unit = l.unit
             )
         } finally { db.endTransaction() }
@@ -340,20 +404,28 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         return DonationInstitution(id, name.trim(), contact, phone)
     }
 
-    fun offers(): List<Offer> {
+    fun offers(): List<PublicOffer> {
         val s = settings()
         expireReservations()
-        val today = LocalDate.now()
+        val today = todayInSaoPaulo()
         val limit = today.plusDays(s.showcaseDays.toLong())
         return lots().asSequence()
             .filter { it.status == "ativo" && it.freeQty > 0 }
             .filter { runCatching { !LocalDate.parse(it.expiryDate).isBefore(today) && !LocalDate.parse(it.expiryDate).isAfter(limit) }.getOrDefault(false) }
-            .map { Offer(it, AlertEngine.daysRemaining(it.expiryDate), AlertEngine.discountedPrice(it.price, it.discount), it.freeQty) }
-            .sortedBy { it.lot.expiryDate }
+            .map {
+                PublicOffer(
+                    id = it.id, code = it.code, productName = it.productName, category = it.category,
+                    unit = it.unit, originalPrice = it.price, discountPercent = it.discount,
+                    finalPrice = AlertEngine.discountedPrice(it.price, it.discount),
+                    expiryDate = it.expiryDate, daysRemaining = AlertEngine.daysRemaining(it.expiryDate),
+                    remainingQty = it.freeQty
+                )
+            }
+            .sortedBy { it.expiryDate }
             .toList()
     }
 
-    fun createReservation(lotId: String, qty: Double, name: String, phone: String): Reservation {
+    fun createReservation(lotId: String, qty: Double, name: String, phone: String): Reservation = synchronized(TX_LOCK) {
         require(qty > 0 && qty <= 50) { "Quantidade deve ser entre 1 e 50." }
         require(name.trim().length >= 3) { "Informe o nome completo do cliente." }
         require(phone.filter { it.isDigit() }.length >= 10) { "Informe telefone com DDD." }
@@ -392,7 +464,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         return "CMC-" + System.currentTimeMillis().toString().takeLast(6)
     }
 
-    fun expireReservations(): Int {
+    fun expireReservations(): Int = synchronized(TX_LOCK) {
         val now = System.currentTimeMillis()
         val db = writableDatabase
         db.beginTransaction()
@@ -449,53 +521,95 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
     fun queryReservation(code: String): Reservation? = reservations().firstOrNull { it.code.equals(code.trim(), true) }
 
     fun report(start: Long, end: Long): Report {
-        val movements = movementsBetween(start, end)
-        var soldQ = 0.0; var soldV = 0.0; var donatedQ = 0.0; var donatedV = 0.0; var discardedQ = 0.0; var discardedV = 0.0
-        val categories = mutableMapOf<String, CategoryReport>()
-        val payments = mutableMapOf<String, PaymentReport>()
-        movements.forEach { m ->
-            val lot = lot(m.lotId)
-            val category = lot?.category ?: "Outros"
-            val price = lot?.price ?: 0.0
-            val cost = lot?.cost ?: 0.0
-            val discount = lot?.discount ?: 0.0
-            when (m.type) {
-                MovementType.SALE -> {
-                    soldQ += m.quantity
-                    val value = m.valueReceived ?: (m.quantity * price * (1 - discount / 100))
-                    soldV += value
-                    val current = categories[category] ?: CategoryReport(category, 0.0, 0.0, 0.0, 0.0)
-                    categories[category] = current.copy(soldQty = current.soldQty + m.quantity, soldValue = current.soldValue + value)
-                    val pm = m.paymentMethod ?: "outro"
-                    val p = payments[pm] ?: PaymentReport(pm, 0, 0.0)
-                    payments[pm] = p.copy(count = p.count + 1, total = p.total + value)
+        var soldQ = 0.0; var soldV = 0.0; var donatedQ = 0.0; var donatedV = 0.0
+        var discardedQ = 0.0; var discardedV = 0.0
+        val statsSql = """
+            SELECT m.tipo,
+                   COALESCE(SUM(m.quantidade), 0) AS qtd,
+                   COALESCE(SUM(CASE
+                       WHEN m.tipo = 'venda' THEN COALESCE(m.valor_recebido,
+                           m.quantidade * p.preco_venda * (1.0 - l.desconto_percentual / 100.0))
+                       WHEN m.tipo = 'doacao' THEN m.quantidade * p.preco_venda
+                       WHEN m.tipo = 'descarte' THEN m.quantidade * p.custo
+                       ELSE 0 END), 0) AS valor
+            FROM movimentacoes m
+            JOIN lotes l ON l.id = m.lote_id
+            JOIN produtos p ON p.id = l.produto_id
+            WHERE m.criado_em BETWEEN CAST(? AS INTEGER) AND CAST(? AS INTEGER)
+            GROUP BY m.tipo
+        """.trimIndent()
+        writableDatabase.rawQuery(statsSql, arrayOf(start.toString(), end.toString())).use { c ->
+            while (c.moveToNext()) {
+                when (MovementType.fromDb(c.getString(c.getColumnIndexOrThrow("tipo")))) {
+                    MovementType.SALE -> { soldQ = c.getDouble(c.getColumnIndexOrThrow("qtd")); soldV = c.getDouble(c.getColumnIndexOrThrow("valor")) }
+                    MovementType.DONATION -> { donatedQ = c.getDouble(c.getColumnIndexOrThrow("qtd")); donatedV = c.getDouble(c.getColumnIndexOrThrow("valor")) }
+                    MovementType.DISPOSAL -> { discardedQ = c.getDouble(c.getColumnIndexOrThrow("qtd")); discardedV = c.getDouble(c.getColumnIndexOrThrow("valor")) }
+                    MovementType.ADJUSTMENT -> Unit
                 }
-                MovementType.DONATION -> {
-                    donatedQ += m.quantity
-                    donatedV += m.quantity * price
-                    val current = categories[category] ?: CategoryReport(category, 0.0, 0.0, 0.0, 0.0)
-                    categories[category] = current.copy(donatedQty = current.donatedQty + m.quantity)
-                }
-                MovementType.DISPOSAL -> {
-                    discardedQ += m.quantity
-                    discardedV += m.quantity * cost
-                    val current = categories[category] ?: CategoryReport(category, 0.0, 0.0, 0.0, 0.0)
-                    categories[category] = current.copy(discardedQty = current.discardedQty + m.quantity)
-                }
-                MovementType.ADJUSTMENT -> Unit
             }
         }
-        return Report(start, end, soldQ, soldV, donatedQ, donatedV, discardedQ, discardedV,
-            categories.values.sortedByDescending { it.soldValue },
-            payments.values.sortedByDescending { it.total })
+
+        val categorySql = """
+            SELECT p.categoria,
+                   COALESCE(SUM(CASE WHEN m.tipo = 'venda' THEN m.quantidade ELSE 0 END), 0) AS vendido_qtd,
+                   COALESCE(SUM(CASE WHEN m.tipo = 'doacao' THEN m.quantidade ELSE 0 END), 0) AS doado_qtd,
+                   COALESCE(SUM(CASE WHEN m.tipo = 'descarte' THEN m.quantidade ELSE 0 END), 0) AS descartado_qtd,
+                   COALESCE(SUM(CASE WHEN m.tipo = 'venda' THEN COALESCE(m.valor_recebido,
+                       m.quantidade * p.preco_venda * (1.0 - l.desconto_percentual / 100.0)) ELSE 0 END), 0) AS valor_vendas
+            FROM movimentacoes m
+            JOIN lotes l ON l.id = m.lote_id
+            JOIN produtos p ON p.id = l.produto_id
+            WHERE m.criado_em BETWEEN CAST(? AS INTEGER) AND CAST(? AS INTEGER)
+            GROUP BY p.categoria
+            ORDER BY valor_vendas DESC, vendido_qtd DESC
+        """.trimIndent()
+        val categories = mutableListOf<CategoryReport>()
+        writableDatabase.rawQuery(categorySql, arrayOf(start.toString(), end.toString())).use { c ->
+            while (c.moveToNext()) {
+                categories.add(CategoryReport(
+                    category = c.getString(c.getColumnIndexOrThrow("categoria")),
+                    soldQty = c.getDouble(c.getColumnIndexOrThrow("vendido_qtd")),
+                    donatedQty = c.getDouble(c.getColumnIndexOrThrow("doado_qtd")),
+                    discardedQty = c.getDouble(c.getColumnIndexOrThrow("descartado_qtd")),
+                    soldValue = c.getDouble(c.getColumnIndexOrThrow("valor_vendas"))
+                ))
+            }
+        }
+
+        val paymentSql = """
+            SELECT COALESCE(m.forma_pagamento, 'outro') AS forma,
+                   COUNT(*) AS pedidos,
+                   COALESCE(SUM(COALESCE(m.valor_recebido,
+                       m.quantidade * p.preco_venda * (1.0 - l.desconto_percentual / 100.0))), 0) AS total
+            FROM movimentacoes m
+            JOIN lotes l ON l.id = m.lote_id
+            JOIN produtos p ON p.id = l.produto_id
+            WHERE m.tipo = 'venda' AND m.criado_em BETWEEN CAST(? AS INTEGER) AND CAST(? AS INTEGER)
+            GROUP BY m.forma_pagamento
+            ORDER BY total DESC
+        """.trimIndent()
+        val payments = mutableListOf<PaymentReport>()
+        writableDatabase.rawQuery(paymentSql, arrayOf(start.toString(), end.toString())).use { c ->
+            while (c.moveToNext()) {
+                payments.add(PaymentReport(
+                    method = c.getString(c.getColumnIndexOrThrow("forma")),
+                    count = c.getInt(c.getColumnIndexOrThrow("pedidos")),
+                    total = c.getDouble(c.getColumnIndexOrThrow("total"))
+                ))
+            }
+        }
+        return Report(start, end, soldQ, soldV, donatedQ, donatedV, discardedQ, discardedV, categories, payments)
     }
 
     private fun movementsBetween(start: Long, end: Long): List<Movement> {
         val sql = """
             SELECT m.*, l.codigo_lote, p.nome AS produto_nome, p.unidade_medida, i.nome AS instituicao_nome
-            FROM movimentacoes m JOIN lotes l ON l.id=m.lote_id JOIN produtos p ON p.id=l.produto_id
-            LEFT JOIN instituicoes i ON i.id=m.instituicao_id
-            WHERE m.criado_em BETWEEN CAST(? AS INTEGER) AND CAST(? AS INTEGER) ORDER BY m.criado_em
+            FROM movimentacoes m
+            JOIN lotes l ON l.id = m.lote_id
+            JOIN produtos p ON p.id = l.produto_id
+            LEFT JOIN instituicoes i ON i.id = m.instituicao_id
+            WHERE m.criado_em BETWEEN CAST(? AS INTEGER) AND CAST(? AS INTEGER)
+            ORDER BY m.criado_em
         """.trimIndent()
         return readableDatabase.rawQuery(sql, arrayOf(start.toString(), end.toString())).use { c ->
             buildList { while (c.moveToNext()) add(c.toMovement()) }
@@ -506,13 +620,13 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         val rows = movementsBetween(start, end)
         val header = "Data/Hora;Tipo;Produto;Lote;Quantidade;Unidade;Valor;Pagamento;Instituição;Motivo;Observação"
         return buildString {
-            appendLine(header)
+            append('\uFEFF').append(header).append("\r\n")
             rows.forEach { m ->
-                appendLine(listOf(
+                append(listOf(
                     formatDateTime(m.createdAt), m.type.label, m.productName, m.lotCode,
                     formatQty(m.quantity), m.unit, String.format(BR_LOCALE, "%.2f", m.valueReceived ?: 0.0),
                     paymentLabel(m.paymentMethod), m.institutionName.orEmpty(), m.reason.orEmpty(), m.note.orEmpty()
-                ).joinToString(";") { "\"${it.replace("\"", "\"\"")}\"" })
+                ).joinToString(";") { "\"${it.replace("\"", "\"\"")}\"" }).append("\r\n")
             }
         }
     }
@@ -542,7 +656,7 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
     }
 
     private fun seedDemo(db: SQLiteDatabase) {
-        val now = LocalDate.now()
+        val now = todayInSaoPaulo()
         fun d(days: Long) = now.plusDays(days).format(ISO)
         val nowMs = System.currentTimeMillis()
         val products = listOf(
@@ -602,5 +716,8 @@ class InventoryDb(context: Context) : SQLiteOpenHelper(context.applicationContex
         })
     }
 
-    companion object { private const val DB_NAME = "controle_maximo.db" }
+    companion object {
+        private const val DB_NAME = "controle_maximo.db"
+        private val TX_LOCK = Any()
+    }
 }

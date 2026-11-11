@@ -2,13 +2,16 @@ package com.controlemaximo.app.data
 
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
 val BR_LOCALE: Locale = Locale("pt", "BR")
 val ISO: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+val SAO_PAULO_ZONE: ZoneId = ZoneId.of("America/Sao_Paulo")
 
 data class Product(
     val id: String,
@@ -39,7 +42,7 @@ data class Lot(
     val supplier: String
 ) {
     val freeQty: Double get() = (availableQty - reservedQty).coerceAtLeast(0.0)
-    val isExpired: Boolean get() = status == "vencido" || runCatching { LocalDate.parse(expiryDate, ISO).isBefore(LocalDate.now()) }.getOrDefault(false)
+    val isExpired: Boolean get() = status == "vencido" || runCatching { LocalDate.parse(expiryDate, ISO).isBefore(todayInSaoPaulo()) }.getOrDefault(false)
 }
 
 enum class AlertLevel(val label: String) {
@@ -77,6 +80,8 @@ data class Movement(
     val institutionName: String?,
     val reason: String?,
     val note: String?,
+    val referenceId: String? = null,
+    val attachmentName: String? = null,
     val createdAt: Long,
     val lotCode: String,
     val productName: String,
@@ -118,10 +123,17 @@ data class Settings(
     val defaultDiscount: Double = 30.0
 )
 
-data class Offer(
-    val lot: Lot,
+data class PublicOffer(
+    val id: String,
+    val code: String,
+    val productName: String,
+    val category: String,
+    val unit: String,
+    val originalPrice: Double,
+    val discountPercent: Double,
+    val finalPrice: Double,
+    val expiryDate: String,
     val daysRemaining: Long,
-    val discountedPrice: Double,
     val remainingQty: Double
 )
 
@@ -173,7 +185,10 @@ fun formatDate(iso: String): String = runCatching {
     LocalDate.parse(iso, ISO).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
 }.getOrDefault(iso)
 
-fun todayIso(): String = LocalDate.now().format(ISO)
+fun todayInSaoPaulo(instant: Instant = Instant.now()): LocalDate =
+    instant.atZone(SAO_PAULO_ZONE).toLocalDate()
+
+fun todayIso(): String = todayInSaoPaulo().format(ISO)
 
 fun paymentLabel(value: String?): String = when (value) {
     "dinheiro" -> "Dinheiro"

@@ -5,10 +5,10 @@ import java.time.temporal.ChronoUnit
 
 object AlertEngine {
 
-    fun daysRemaining(expiryIso: String, today: LocalDate = LocalDate.now()): Long =
+    fun daysRemaining(expiryIso: String, today: LocalDate = todayInSaoPaulo()): Long =
         runCatching { ChronoUnit.DAYS.between(today, LocalDate.parse(expiryIso, ISO)) }.getOrDefault(0)
 
-    fun level(expiryIso: String, attentionDays: Int = 7, urgentDays: Int = 2, today: LocalDate = LocalDate.now()): AlertLevel? {
+    fun level(expiryIso: String, attentionDays: Int = 7, urgentDays: Int = 2, today: LocalDate = todayInSaoPaulo()): AlertLevel? {
         val days = daysRemaining(expiryIso, today)
         return when {
             days < 0 -> AlertLevel.EXPIRED
@@ -19,7 +19,7 @@ object AlertEngine {
     }
 
     fun classify(lots: List<Lot>, attentionDays: Int, urgentDays: Int): List<AlertItem> {
-        val today = LocalDate.now()
+        val today = todayInSaoPaulo()
         return lots.asSequence()
             .filter { it.availableQty > 0 }
             .mapNotNull { lot ->

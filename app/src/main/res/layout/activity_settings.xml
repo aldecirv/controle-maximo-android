@@ -47,7 +47,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <TextView style="@style/TextAppearance.CM.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="Controle Máximo 1.0.0" />
+            <TextView style="@style/TextAppearance.CM.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="Controle Máximo 1.1.0" />
             <TextView style="@style/TextAppearance.CM.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="MVP offline de gestão de validade para pequenos comércios. Dados no próprio aparelho." />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

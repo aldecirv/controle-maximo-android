@@ -41,6 +41,10 @@ class MainActivity : AppCompatActivity() {
         binding.navMore.setOnClickListener { showMoreSheet() }
         binding.moreButton.setOnClickListener { showMoreSheet() }
         binding.bellButton.setOnClickListener { select(R.id.navAlerts) }
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 700)
+        }
         select(R.id.navDashboard)
     }
 

@@ -60,6 +60,16 @@
                 <com.google.android.material.chip.Chip android:id="@+id/filterExpired" style="@style/Widget.CM.Chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Vencidos" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/emailButton"
+            style="@style/Widget.CM.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_gravity="end"
+            android:minWidth="0dp"
+            android:text="Enviar resumo por e-mail"
+            android:textSize="9sp" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
